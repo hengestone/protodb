@@ -1,0 +1,18 @@
+{application, protodb,
+ [{description, "Database utility"},
+  {vsn, "0.1.0"},
+  {registered, [
+    protodb
+  ]},
+  {mod, { protodb, []}},
+  {applications,
+   [kernel,
+    stdlib,
+    lager
+   ]},
+  {env,[]},
+  {modules, [protodb]},
+  {maintainers, ["Conrad Steenberg <conrad.steenberg@gmail.com>"]},
+  {licenses, ["Mozilla Public License V2"]},
+  {links, []}
+ ]}.
