@@ -112,7 +112,7 @@ initdb(DbType, Poolname) ->
 initdb_models(Conn, Poolname) ->
  case ets:match(protodb_sessions, Conn) of
     [] ->
-      Modules =  application:get_env(protodb, models),
+      {ok, Modules} =  application:get_env(protodb, models),
       [Module:initdb(Conn, Poolname) || Module <- Modules],
       ets:insert(protodb_sessions, Conn),
       Conn;
