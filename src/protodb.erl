@@ -13,6 +13,7 @@
 -export([
           config/2, connect/2,
           create_migration/3,
+          disconnect/2,
           execute/4,
           initdb/2,
           list_migrations/1,
@@ -63,6 +64,10 @@ connect(pgsql, Database) ->
       lager:error("DB Connecction Error:~n~p", [Err]),
       {error, Err}
   end.
+
+%%- Disvonnect helpers -------------------------------------------------------
+disconnect(_, {ConnType, Pid}) ->
+  erlsqlmigrate_core:disconnect({ConnType, Pid}).
 
 %%- Do all migrations --------------------------------------------------------
 migrate({_, _Config, _MigDir}=DbConf) ->
