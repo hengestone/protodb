@@ -100,6 +100,12 @@ create_migration(DbType, Poolname, Name) ->
 
 %%- Initialize the databases -------------------------------------------------
 initdb(DbType, Poolname) ->
+  case ets:info(protodb_sessions) of
+    undefined ->
+      ets:new(protodb_sessions, [bag, named_table, public]);
+    _ -> ok
+  end,
+
   try config(DbType, Poolname) of
     DbConfig ->
       migrate(DbConfig),
