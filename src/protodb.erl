@@ -35,26 +35,27 @@
 %%============================================================================
 %%- Hardcoded database configs -----------------------------------------------
 config(erlcass, Poolname) ->
-  Config = [{erlcass, ["host", 9042, Poolname, "username", "password"]}],
+  Config = ["host", 9042, Poolname, "username", "password"],
   {ok, MigDir} = application:get_env(protodb, migrations),
   {erlcass, Config, MigDir};
 
 config(pgsql, Database) ->
   {ok, ClientConfig} = application:get_env(protodb, pgsql_config),
-  Config = [{pgsql, lists:append(ClientConfig, [{database, Database}])}],
+  Config = lists:append(ClientConfig, [{database, Database}]),
   {ok, MigDir} = application:get_env(protodb, migrations),
   {pgsql, Config, MigDir}.
 
 %%- Connect helpers ----------------------------------------------------------
-connect(erlcass, Poolname) ->
-  Config = ["host", 9042, Poolname, "username", "password"],
+connect(DbType, Database) ->
+    {DbType, Config, _MigDir} = config(DbType, Database),
+    connect(DbType, Database, Config).
+
+connect(erlcass, Poolname, Config) ->
   Conn = erlsqlmigrate_core:connect(erlcass, Config),
   lager:debug("DB Connect: ~p", [Conn]),
   initdb_models(Conn, Poolname);
 
-connect(pgsql, Database) ->
-  {ok, ClientConfig} = application:get_env(protodb, pgsql_config),
-  Config = lists:append(ClientConfig, [{database, Database}]),
+connect(pgsql, Database, Config) ->
   try erlsqlmigrate_core:connect(pgsql, Config) of
     {pgsql_connection, _Pid} = Conn ->
       lager:debug("DB Connect: ~p", [Conn]),
@@ -70,11 +71,11 @@ disconnect(_, {ConnType, Pid}) ->
   erlsqlmigrate_core:disconnect({ConnType, Pid}).
 
 %%- Do all migrations --------------------------------------------------------
-migrate({_, _Config, _MigDir}=DbConf) ->
+migrate({_DbType, _Config, _MigDir}=DbConf) ->
   migrate(DbConf, []).
-migrate({_, Config, MigDir}, Names) ->
-  erlsqlmigrate:create(Config, MigDir, []),
-  erlsqlmigrate:up(Config, MigDir, Names);
+migrate({DbType, Config, MigDir}, Names) ->
+  erlsqlmigrate:create([{DbType, Config}], MigDir, []),
+  erlsqlmigrate:up([{DbType, Config}], MigDir, Names);
 migrate(DbType, Poolname) ->
   migrate(config(DbType, Poolname), []).
 migrate(DbType, Poolname, Name) ->
@@ -83,23 +84,23 @@ migrate(DbType, Poolname, Name) ->
 %%- Roll back one migration --------------------------------------------------
 migrate_down({_, _Config, _MigDir}=DbConf) ->
   migrate_down(DbConf, []).
-migrate_down({_, Config, MigDir}, Names) ->
-  erlsqlmigrate:create(Config, MigDir, []),
-  erlsqlmigrate:down(Config, MigDir, Names);
+migrate_down({DbType, Config, MigDir}, Names) ->
+  erlsqlmigrate:create([{DbType, Config}], MigDir, []),
+  erlsqlmigrate:down([{DbType, Config}], MigDir, Names);
 migrate_down(DbType, Poolname) ->
   migrate_down(config(DbType, Poolname), []).
 migrate_down(DbType, Poolname, Name) ->
   migrate_down(config(DbType, Poolname), [Name]).
 
 %%- List migrations ---------------------------------------------------------
-list_migrations({_, Config, MigDir}) ->
-  erlsqlmigrate:list(Config, MigDir, []).
+list_migrations({DbType, Config, MigDir}) ->
+  erlsqlmigrate_core:list([{DbType, Config}], MigDir).
 list_migrations(DbType, Poolname) ->
   list_migrations(config(DbType, Poolname)).
 
 %%- Create migration ---------------------------------------------------------
-create_migration({_, Config, MigDir}, Name) ->
-  erlsqlmigrate:create(Config, MigDir, Name).
+create_migration({DbType, Config, MigDir}, Name) ->
+  erlsqlmigrate:create([{DbType, Config}], MigDir, Name).
 create_migration(DbType, Poolname, Name) ->
   create_migration(config(DbType, Poolname), Name).
 
