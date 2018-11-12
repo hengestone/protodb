@@ -15,6 +15,7 @@
           create_migration/3,
           disconnect/2,
           execute/4,
+          execute_format/5,
           initdb/2,
           list_migrations/1,
           list_migrations/2,
@@ -191,6 +192,29 @@ prepare_statement({pgsql_connection, _Pid} = Conn, Name, Statement, Args) ->
     {error, Error}
   end.
 
+%%----------------------------------------------------------------------------
+append_params(K, V, [Keys, Values, NumList, 1]) ->
+  [["(" ++ atom_to_list(K)|Keys],
+    [V|Values],
+    [io_lib:format("($~b", [1])|NumList],
+    0
+  ];
+append_params(K, V, [Keys, Values, NumList, Num]) ->
+  [[", " ++ atom_to_list(K)|Keys],
+    [V|Values],
+    [io_lib:format(", $~b", [Num])|NumList],
+    Num-1
+  ].
+
+%%----------------------------------------------------------------------------
+map_where(#{} = Params) ->
+  [_Keys, _Values, _NumList, _] =
+    maps:fold(
+      fun append_params/3,
+      [[")"], [], [")"], maps:size(Params)],
+      Params
+    ).
+
 %------------------------ Execute prepared statement -------------------------
 execute({ecass_connection, _Pid} = Conn, _Name, Statement, Args) ->
   erlcass:extended_query(Statement, Args , Conn);
@@ -198,5 +222,19 @@ execute({pgsql_connection, _Pid} = Conn, _Name, Statement, Args) ->
   lager:debug(Statement),
   lager:debug("~p", [Args]),
   pgsql_connection:extended_query(Statement, Args, Conn).
+
+%------------------------ Execute and format statement ------------------------
+execute_format({ConnType, _Pid} = Conn, Module, Name, PreStatement, Map)
+  when is_map(Map)
+  ->
+  Statement = e2qc:cache(Module, {ConnType, Name, maps:keys(Map)}, 3600,
+    fun() ->
+      [StringKeys, _Values, QueryNums, _] = map_where(Map),
+      io_lib:format(PreStatement, [StringKeys, QueryNums])
+    end),
+  lager:debug(Statement),
+  lager:debug("~p", [Map]),
+
+  execute(Conn, Name, Statement, maps:values(Map)).
 
 %% ================================== Tests ==================================
