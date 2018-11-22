@@ -224,6 +224,11 @@ execute({pgsql_connection, _Pid} = Conn, _Name, Statement, Args) ->
   pgsql_connection:extended_query(Statement, Args, Conn).
 
 %------------------------ Execute and format statement ------------------------
+execute_format({ConnType, _Pid} = Conn, Module, Name, PreFun, Map)
+  when is_function(PreFun)
+  ->
+  execute_format({ConnType, _Pid} = Conn, Module, Name, PreFun(), Map);
+
 execute_format({ConnType, _Pid} = Conn, Module, Name, PreStatement, Map)
   when is_map(Map)
   ->
