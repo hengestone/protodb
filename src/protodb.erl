@@ -21,6 +21,7 @@
           list_migrations/2,
           load_immutable/3,
           load_immutable/4,
+          map_where/1,
           migrate_down/1,
           migrate_down/2,
           migrate_down/3,
@@ -193,25 +194,27 @@ prepare_statement({pgsql_connection, _Pid} = Conn, Name, Statement, Args) ->
   end.
 
 %%----------------------------------------------------------------------------
-append_params(K, V, [Keys, Values, NumList, 1]) ->
+append_params(K, V, [Keys, Values, NumList, Max, Max]) ->
   [["(" ++ atom_to_list(K)|Keys],
     [V|Values],
-    [io_lib:format("($~b", [1])|NumList],
-    0
+    [io_lib:format("($~b", [Max])|NumList],
+    Max,
+    Max
   ];
-append_params(K, V, [Keys, Values, NumList, Num]) ->
+append_params(K, V, [Keys, Values, NumList, Num, Max]) ->
   [[", " ++ atom_to_list(K)|Keys],
     [V|Values],
     [io_lib:format(", $~b", [Num])|NumList],
-    Num-1
+    Num+1,
+    Max
   ].
 
 %%----------------------------------------------------------------------------
 map_where(#{} = Params) ->
-  [_Keys, _Values, _NumList, _] =
+  [_Keys, _Values, _NumList, _, _] =
     maps:fold(
       fun append_params/3,
-      [[")"], [], [")"], maps:size(Params)],
+      [[")"], [], [")"], 1, maps:size(Params)],
       Params
     ).
 
@@ -234,11 +237,11 @@ execute_format({ConnType, _Pid} = Conn, Module, Name, PreStatement, Map)
   ->
   Statement = e2qc:cache(Module, {ConnType, Name, maps:keys(Map)}, 3600,
     fun() ->
-      [StringKeys, _Values, QueryNums, _] = map_where(Map),
+      [StringKeys, _Values, QueryNums, _, _] = map_where(Map),
       io_lib:format(PreStatement, [StringKeys, QueryNums])
     end),
-  lager:debug(Statement),
-  lager:debug("~p", [Map]),
+  lager:info(Statement),
+  lager:info("~p", [Map]),
 
   execute(Conn, Name, Statement, maps:values(Map)).
 
