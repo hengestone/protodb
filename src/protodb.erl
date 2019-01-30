@@ -28,8 +28,9 @@
           migrate/1,
           migrate/2,
           migrate/3,
+          prepare_statement/4,
           reset/2,
-          prepare_statement/4
+          simple_query/2
         ]).
 
 %%============================================================================
@@ -225,6 +226,9 @@ execute({pgsql_connection, _Pid} = Conn, _Name, Statement, Args) ->
   lager:debug(Statement),
   lager:debug("~p", [Args]),
   pgsql_connection:extended_query(Statement, Args, Conn).
+simple_query({pgsql_connection, _Pid} = Conn, Statement) ->
+  lager:debug(Statement),
+  pgsql_connection:simple_query(Statement, Conn).
 
 %------------------------ Execute and format statement ------------------------
 execute_format({ConnType, _Pid} = Conn, Module, Name, PreFun, Map)
