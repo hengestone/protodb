@@ -55,17 +55,17 @@ connect(DbType, Database) ->
 
 connect(erlcass, Poolname, Config) ->
   Conn = erlsqlmigrate_core:connect(erlcass, Config),
-  lager:debug("DB Connect: ~p", [Conn]),
+  logger:debug("DB Connect: ~p", [Conn]),
   initdb_models(Conn, Poolname);
 
 connect(pgsql, Database, Config) ->
   try erlsqlmigrate_core:connect(pgsql, Config) of
     {pgsql_connection, _Pid} = Conn ->
-      lager:debug("DB Connect: ~p", [Conn]),
+      logger:debug("DB Connect: ~p", [Conn]),
       initdb_models(Conn, Database)
   catch
     {pgsql_error, Err} ->
-      lager:error("DB Connecction Error:~n~p", [Err]),
+      logger:error("DB Connecction Error:~n~p", [Err]),
       {error, Err}
   end.
 
@@ -178,7 +178,7 @@ prepare_statement({erlcass_connection, _KeySpace}, Name, Statement, Args) ->
   {error, already_exist} ->
     {ok};
   Error ->
-    lager:error("Error creating prepared statement ~s:~n~p~n", [Name, Error]),
+    logger:error("Error creating prepared statement ~s:~n~p~n", [Name, Error]),
     {error, Error}
   end;
 
@@ -190,7 +190,7 @@ prepare_statement({pgsql_connection, _Pid} = Conn, Name, Statement, Args) ->
   {error, already_exist} ->
     {ok};
   Error ->
-    lager:error("Error creating prepared statement ~s:~n~p~n", [Name, Error]),
+    logger:error("Error creating prepared statement ~s:~n~p~n", [Name, Error]),
     {error, Error}
   end.
 
@@ -223,11 +223,11 @@ map_where(#{} = Params) ->
 execute({ecass_connection, _Pid} = Conn, _Name, Statement, Args) ->
   erlcass:extended_query(Statement, Args , Conn);
 execute({pgsql_connection, _Pid} = Conn, _Name, Statement, Args) ->
-  lager:debug(Statement),
-  lager:debug("~p", [Args]),
+  logger:debug(Statement),
+  logger:debug("~p", [Args]),
   pgsql_connection:extended_query(Statement, Args, Conn).
 simple_query({pgsql_connection, _Pid} = Conn, Statement) ->
-  lager:debug(Statement),
+  logger:debug(Statement),
   pgsql_connection:simple_query(Statement, Conn).
 
 %------------------------ Execute and format statement ------------------------
@@ -244,8 +244,8 @@ execute_format({ConnType, _Pid} = Conn, Module, Name, PreStatement, Map)
       [StringKeys, _Values, QueryNums, _, _] = map_where(Map),
       io_lib:format(PreStatement, [StringKeys, QueryNums])
     end),
-  lager:info(Statement),
-  lager:info("~p", [Map]),
+  logger:info(Statement),
+  logger:info("~p", [Map]),
 
   execute(Conn, Name, Statement, maps:values(Map)).
 
